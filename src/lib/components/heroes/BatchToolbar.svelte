@@ -18,6 +18,7 @@
 	import ArrowUpIcon from 'phosphor-svelte/lib/ArrowUpIcon';
 	import RevivalWizard from './RevivalWizard.svelte';
 	import BatchQuirkEditor from './BatchQuirkEditor.svelte';
+	import SkillMaxButton from './SkillMaxButton.svelte';
 	import type { HeroSummary } from '#lib/stores/save-data.svelte.js';
 	import {
 		healHeroToMax,
@@ -76,6 +77,7 @@
 		<Separator orientation="vertical" class="mx-1 self-stretch data-[orientation=vertical]:h-auto" />
 
 		<BatchQuirkEditor {selectedHeroes} />
+		<SkillMaxButton heroes={selectedHeroes} batch />
 		<!-- Heal All -->
 		<Tooltip>
 			<TooltipTrigger>

@@ -4,6 +4,7 @@
 	import { describeMessage, t, getEditorLocale, type MessageDescriptor } from '#lib/i18n/index.svelte.js';
 	import Message from '#lib/i18n/Message.svelte';
 	import ResolveLabel from './ResolveLabel.svelte';
+	import SkillMaxButton from './SkillMaxButton.svelte';
 	import { formatNumber, compareNames } from '#lib/i18n/intl.js';
 	import { heroClassName, heroStatusLabel, gameTextLocale, combatSkillName, campingSkillName, trinketName, afflictionName, vampireStateName, VIRTUES } from '#lib/save-labels.js';
 
@@ -696,6 +697,7 @@
 		<div>
 			<div class="flex items-center gap-2 py-1">
 				<span class="shrink-0 text-xs font-semibold uppercase tracking-wider">{t('heroes.skills')}</span>
+				<SkillMaxButton heroes={[hero]} />
 				<Separator class="flex-1" />
 			</div>
 			<div class="mt-2 space-y-3">

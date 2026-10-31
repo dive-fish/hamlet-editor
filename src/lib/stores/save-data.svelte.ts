@@ -10,6 +10,8 @@ import type { MessageDescriptor } from '#lib/i18n/index.svelte.js';
 import { compareIds } from '#lib/i18n/intl.js';
 import { compareBuildingNames } from '#lib/save-labels.js';
 import { equipTrinket, returnTrinkets, type TrinketSource } from '#lib/trinkets.js';
+import { planMaxOwnedSkills } from '#lib/skill-upgrades.js';
+import { getAvailableCombatSkills } from '#lib/stores/game-data.svelte.js';
 import { parseInteger, validateHeroName } from '#lib/input-validation.js';
 import { updateWallet, updateEstateItem } from '#lib/estate.js';
 import { updateTorchlight, updateHungerBuffer, updateRaidAmount, abandonRaidData, abandonRaidBlockReason } from '#lib/raid.js';
@@ -478,6 +480,22 @@ export function toggleQuirkLock(guid: string, quirkId: string) {
 	markDirty('persist.roster.json');
 }
 
+/** Max only unlocked combat skills; preserve equipped slots and all unrelated purchases. */
+export function maxHeroCombatSkills(guid: string): 'changed' | 'unchanged' | 'unsupported' {
+ const raw = getHeroRawData(guid);
+ if (!raw || raw['roster.status'] === 3 || !upgrades || !Object.hasOwn(CLASS_DISPLAY_NAMES, raw.heroClass)) return 'unsupported';
+ const available = getAvailableCombatSkills(raw.heroClass);
+ if (!available.length) return 'unsupported';
+ const plan = planMaxOwnedSkills(upgrades.base_root.purchases, guid, raw.heroClass, available, Object.keys(raw.skills.selected_combat_skills));
+ if (!plan) return 'unsupported';
+ if (!plan.additions.length && !plan.enableKeys.length) return 'unchanged';
+ for (const key of plan.enableKeys) upgrades.base_root.purchases[key].is_purchased = true;
+ let next = 0;
+ for (const key of Object.keys(upgrades.base_root.purchases)) if (/^\d+$/.test(key)) next = Math.max(next, Number(key) + 1);
+ for (const purchase of plan.additions) upgrades.base_root.purchases[String(next++)] = purchase;
+ markDirty('persist.upgrades.json');
+ return 'changed';
+}
 /** Toggle a combat skill on or off for a hero. */
 export function toggleCombatSkill(guid: string, skillId: string) {
 	const raw = getHeroRawData(guid);
