@@ -34,7 +34,8 @@ jobs:
           pnpm check
           node --test tests/hero-batch.test.mjs tests/skill-upgrades.test.mjs tests/save-data.test.mjs tests/effect-descriptions.test.mjs
       - name: Check game effect loaders
-        run: cargo test --manifest-path src-tauri/Cargo.toml commands::gamedata::
+        run: |
+          cargo test --manifest-path src-tauri/Cargo.toml commands::gamedata::
       - name: Build Windows installer
         run: pnpm tauri build --bundles nsis
       - name: Assemble portable package
