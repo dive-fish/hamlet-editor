@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { t } from '#lib/i18n/index.svelte.js';
 	import { formatNumber } from '#lib/i18n/intl.js';
 	import EmptyState from '#lib/components/EmptyState.svelte';
@@ -18,8 +19,20 @@
 
 	let selectedGuids = $state(new Set<string>());
 	let activeGuid = $state<string | null>(null);
+	let handledHeroTarget = $state<string | null>(null);
 
 	let heroes = $derived(getHeroes());
+
+	// Wait for the roster, and handle each navigation target only once so later
+	// edits or manual selections do not jump back to the linked hero.
+	$effect(() => {
+		const target = page.url.searchParams.get('hero');
+		if (!target) { handledHeroTarget = null; return; }
+		if (target === handledHeroTarget || !heroes.some(hero => hero.guid === target)) return;
+		activeGuid = target;
+		selectedGuids = new Set();
+		handledHeroTarget = target;
+	});
 
 	let activeHero = $derived<HeroSummary | null>(
 		activeGuid ? heroes.find((h) => h.guid === activeGuid) ?? null : null

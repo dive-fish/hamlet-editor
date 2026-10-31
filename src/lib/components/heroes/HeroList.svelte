@@ -2,6 +2,7 @@
      For typical DD1 rosters (< 30 heroes), this performs well.
      Virtual scrolling can be added later if needed for heavily modded games. -->
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { mergeProps } from 'bits-ui';
 	import { t } from '#lib/i18n/index.svelte.js';
 	import { formatNumber, compareNames } from '#lib/i18n/intl.js';
@@ -109,6 +110,20 @@
 
 	function selectHero(guid: string) {
 		activeGuid = guid;
+	}
+
+	function revealActive(node: HTMLDivElement, active: boolean) {
+		let current = active, mounted = true;
+		async function reveal(value: boolean) {
+			current = value;
+			if (!value) return;
+			await tick();
+			if (!mounted || !current) return;
+			node.querySelector<HTMLButtonElement>('[data-hero-select]')?.focus({ preventScroll: true });
+			node.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+		}
+		void reveal(active);
+		return { update: reveal, destroy() { mounted = false; } };
 	}
 
 	function toggleStatusFilter(status: number) {
@@ -275,6 +290,7 @@
 							{isActive ? 'bg-accent' : 'hover:bg-muted/50'}
 							{isDead ? 'opacity-60' : ''}"
 						data-testid={`hero-row-${hero.guid}`}
+						use:revealActive={isActive}
 					>
 						<Checkbox
 							checked={isSelected}
@@ -286,6 +302,8 @@
 							type="button"
 							class="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
 							onclick={() => selectHero(hero.guid)}
+							data-hero-select
+							aria-current={isActive ? 'true' : undefined}
 						>
 							<!-- Portrait -->
 							<div class="relative size-12 shrink-0 overflow-hidden {isDead ? 'opacity-50' : ''}">

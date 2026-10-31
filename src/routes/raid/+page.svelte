@@ -84,6 +84,7 @@
 			return {
 				position: index + 1,
 				guid,
+				heroGuid: hero?.guid ?? null,
 				name: hero?.name ?? null,
 				heroClass: hero?.heroClass ?? null,
 				classDisplayName: hero
@@ -215,6 +216,7 @@
 							position={slot.position}
 							heroName={slot.name}
 							heroClass={slot.classDisplayName}
+							heroGuid={slot.heroGuid}
 						/>
 						<!-- Arrow buttons are the intentional reorder UX for party positions.
 						     svelte-dnd-action was considered but has Svelte 5 compatibility issues.

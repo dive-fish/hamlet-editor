@@ -7,19 +7,17 @@
 	let {
 		position,
 		heroName,
-		heroClass
+		heroClass,
+		heroGuid = null
 	}: {
 		position: number;
 		heroName: string | null;
 		heroClass: string | null;
+		heroGuid?: string | null;
 	} = $props();
 </script>
 
-<div
-	class="flex flex-col items-center gap-2 rounded-sm border p-3 min-w-[120px]"
-	role="group"
-	aria-label={t('raid.partySlot', { position: formatNumber(position), name: heroName ?? t('raid.empty') })}
->
+{#snippet contents()}
 	<!-- Portrait placeholder -->
 	<div
 		class="flex h-14 w-14 items-center justify-center rounded-sm bg-muted text-muted-foreground"
@@ -47,4 +45,19 @@
 	<Badge variant="outline" class="text-[10px] font-normal">
 		{t('raid.position', { position: formatNumber(position) })}
 	</Badge>
-</div>
+{/snippet}
+
+{#if heroGuid}
+	<a href={`/heroes?hero=${encodeURIComponent(heroGuid)}`}
+		class="flex min-w-[120px] flex-col items-center gap-2 rounded-sm border p-3 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+		aria-label={t('raid.partySlot', { position: formatNumber(position), name: heroName ?? t('raid.empty') })}
+		data-testid={`party-hero-${heroGuid}`}
+	>
+		{@render contents()}
+	</a>
+{:else}
+	<div class="flex min-w-[120px] flex-col items-center gap-2 rounded-sm border p-3" role="group"
+		aria-label={t('raid.partySlot', { position: formatNumber(position), name: heroName ?? t('raid.empty') })}>
+		{@render contents()}
+	</div>
+{/if}
