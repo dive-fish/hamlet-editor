@@ -47,6 +47,7 @@ jobs:
           Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES.md,THIRD_PARTY_LICENSES.md -Destination artifacts/portable/licenses
           Copy-Item -LiteralPath src-tauri/crates/ddsavelib/LICENSE -Destination artifacts/portable/licenses/ddsavelib-LICENSE
           Copy-Item -LiteralPath docs/batch-editing.md -Destination artifacts/portable
+          Copy-Item -LiteralPath docs/RELEASE-v1.1.1.zh-CN.md -Destination artifacts/portable
           Compress-Archive -Path artifacts/portable/* -DestinationPath artifacts/Hamlet-Editor-Batch-Windows-x64.zip
           Copy-Item -Path src-tauri/target/release/bundle/nsis/*.exe -Destination artifacts
           Get-ChildItem artifacts -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { '{0}  {1}' -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } | Set-Content artifacts/SHA256SUMS.txt

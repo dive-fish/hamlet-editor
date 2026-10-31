@@ -4,7 +4,7 @@
 
 A save editor for Darkest Dungeon. Edit your heroes, estate, town and raids, with backups and safety checks built in.
 
-The editor is available in [12 languages](#languages-and-privacy); this README is in English only.
+The editor is available in [12 languages](#languages-and-privacy). See also the [中文增强版 v1.1.1 介绍](docs/RELEASE-v1.1.1.zh-CN.md).
 
 [![tests](https://img.shields.io/github/actions/workflow/status/zendevio/hamlet-editor/ci.yml?branch=main&label=tests&logo=github)](https://github.com/zendevio/hamlet-editor/actions/workflows/ci.yml) [![downloads](https://img.shields.io/github/downloads/zendevio/hamlet-editor/total?label=downloads)](https://github.com/zendevio/hamlet-editor/releases) [![release](https://img.shields.io/github/v/release/zendevio/hamlet-editor?label=release)](https://github.com/zendevio/hamlet-editor/releases/latest) [![license](https://img.shields.io/github/license/zendevio/hamlet-editor?label=license)](LICENSE) [![platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-blue)](#download) [![Nexus Mods](https://img.shields.io/badge/Nexus%20Mods-Hamlet%20Editor-orange)](https://www.nexusmods.com/darkestdungeon/mods/2312)
 
@@ -13,6 +13,8 @@ The editor is available in [12 languages](#languages-and-privacy); this README i
 [Download](#download) · [Features](#features) · [Build from source](#build-from-source)
 
 </div>
+
+> **中文增强版 v1.1.1：** 支持批量怪癖、五黄五红打法预设、技能满级、详细属性及远征英雄定位。**本人的游戏环境安装了可锁定 5 条黄色怪癖的 MOD。** 编辑器不附带该 MOD，也不会修改游戏本身的锁定数量限制。详见[版本介绍](docs/RELEASE-v1.1.1.zh-CN.md)。
 
 <details>
 <summary><b>Screenshots</b> (click to expand)</summary>
