@@ -1,0 +1,57 @@
+name: Package Windows batch editor
+
+on:
+  push:
+    branches: [codex/batch-quirks-windows]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@d1031067263f94b142dd6c0ce24c5eb9d02d52a0
+        with:
+          toolchain: 1.99.1
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+        with:
+          workspaces: ./src-tauri -> target
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check frontend and batch logic
+        run: |
+          pnpm check
+          node --test tests/hero-batch.test.mjs
+      - name: Build Windows installer
+        run: pnpm tauri build --bundles nsis
+      - name: Assemble portable package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path artifacts/portable/licenses -Force | Out-Null
+          Copy-Item -LiteralPath src-tauri/target/release/hamlet-editor.exe -Destination artifacts/portable/Hamlet-Editor-Batch.exe
+          Copy-Item -LiteralPath LICENSE,THIRD_PARTY_NOTICES.md,THIRD_PARTY_LICENSES.md -Destination artifacts/portable/licenses
+          Copy-Item -LiteralPath src-tauri/crates/ddsavelib/LICENSE -Destination artifacts/portable/licenses/ddsavelib-LICENSE
+          Copy-Item -LiteralPath docs/batch-editing.md -Destination artifacts/portable
+          Compress-Archive -Path artifacts/portable/* -DestinationPath artifacts/Hamlet-Editor-Batch-Windows-x64.zip
+          Copy-Item -Path src-tauri/target/release/bundle/nsis/*.exe -Destination artifacts
+          Get-ChildItem artifacts -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { '{0}  {1}' -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } | Set-Content artifacts/SHA256SUMS.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: Hamlet-Editor-Batch-Windows-x64
+          path: |
+            artifacts/*.exe
+            artifacts/*.zip
+            artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

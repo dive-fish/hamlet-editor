@@ -107,7 +107,7 @@
 				else showPersistentError(notice, notice.detail, `settings-startup-${index}`);
 			}
 		});
-		if (import.meta.env.DEV && new URL(window.location.href).searchParams.has('h1') && !new URL(window.location.href).searchParams.has('overflow')) {
+		if (import.meta.env.DEV && new URL(window.location.href).searchParams.has('h1') && !new URL(window.location.href).searchParams.has('overflow') && !new URL(window.location.href).searchParams.has('demo')) {
 			void import('#lib/dev/InvariantFixture.svelte').then((module) => { HarnessFixture = module.default; });
 		}
 	});
@@ -914,7 +914,8 @@
 		</header>
 
 		<main inert={isSaving} class="min-h-0 flex-1 overflow-hidden p-4">
-			{#if HarnessFixture}<HarnessFixture showLanguageControls={currentPath !== '/settings'} />{/if}
+			{#if import.meta.env.DEV && page.url.searchParams.has('h1') && page.url.searchParams.has('demo')}<p role="status" class="mb-2 text-sm text-muted-foreground">演示数据 · 不会读写真实存档</p>{/if}
+		{#if HarnessFixture}<HarnessFixture showLanguageControls={currentPath !== '/settings'} />{/if}
 			{@render children()}
 		</main>
 	</SidebarInset>

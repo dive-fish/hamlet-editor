@@ -17,6 +17,7 @@
 	import BrainIcon from 'phosphor-svelte/lib/BrainIcon';
 	import ArrowUpIcon from 'phosphor-svelte/lib/ArrowUpIcon';
 	import RevivalWizard from './RevivalWizard.svelte';
+	import BatchQuirkEditor from './BatchQuirkEditor.svelte';
 	import type { HeroSummary } from '#lib/stores/save-data.svelte.js';
 	import {
 		healHeroToMax,
@@ -74,6 +75,7 @@
 		     the whole wrapped toolbar height and push the second line out of the toolbar. -->
 		<Separator orientation="vertical" class="mx-1 self-stretch data-[orientation=vertical]:h-auto" />
 
+		<BatchQuirkEditor {selectedHeroes} />
 		<!-- Heal All -->
 		<Tooltip>
 			<TooltipTrigger>

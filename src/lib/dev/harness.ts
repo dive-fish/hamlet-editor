@@ -30,6 +30,14 @@ export async function installHarness() {
 	}
 	if (new URL(location.href).searchParams.has('emptyPaths')) { values.gamePath = ''; values.savePath = ''; }
 	const fixture = createHarnessProfile();
+	const cleanDemo = new URL(location.href).searchParams.has('demo');
+	if (cleanDemo) {
+		values.editorLanguage = 'schinese';
+		values.gameTextLanguage = 'english';
+		const firstHero = Object.values(fixture['persist.roster.json'].base_root.heroes)[0];
+		firstHero.hero_file_data.raw_data.base_root.heroClass = 'crusader';
+		delete fixture['persist.upgrades.json'].base_root.purchases['21'];
+	}
 	const startup = new URL(location.href).searchParams.get('startup');
 	const profileLoading = new URL(location.href).searchParams.get('profileLoading');
 	if (profileLoading === 'read') plans.push({ command: 'load_profile', hold: 'profile-read' });
@@ -100,6 +108,7 @@ export async function installHarness() {
 		if (command === 'generate_name_table') return ['stage_coach.rostersize'];
 		if (command === 'set_name_table' || command === 'save_profile') return;
 		if (command === 'load_profile') return { data: structuredClone(fixture), name_table_version: 17 };
+		if (command === 'load_localization' && cleanDemo) return { table: {}, english: {} };
 		if (command === 'load_localization') return { table: pseudoNames ? expandedNames : {
 			hero_class_name_crusader: `${args.language}:crusader`,
 			hero_class_name_vestal: `${args.language}:vestal`,
