@@ -28,6 +28,10 @@ pub struct QuirkDef {
     pub id: String,
     pub is_positive: bool,
     pub is_disease: bool,
+    #[serde(default)]
+    pub effects: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub incompatible_quirks: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,6 +40,8 @@ pub struct TrinketDef {
     pub rarity: Option<String>,
     pub class_restriction: Option<String>,
     pub limit: Option<u32>,
+    #[serde(default)]
+    pub effects: Vec<serde_json::Value>,
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +141,8 @@ pub fn load_quirk_library(game_path: String) -> Result<Vec<QuirkDef>, AppError> 
     let com = data_root.join("dlc/735730_color_of_madness/shared/quirk/com.quirk_library.json");
     parse_quirk_library(&com, &mut quirks);
 
+    let buffs = load_effect_definitions(&data_root);
+    for quirk in &mut quirks { resolve_effects(&mut quirk.effects, &buffs); }
     Ok(quirks)
 }
 
@@ -176,7 +184,38 @@ pub fn load_trinket_library(game_path: String) -> Result<Vec<TrinketDef>, AppErr
     }
     visit(&data_root.join("dlc"), &mut trinkets);
 
+    let buffs = load_effect_definitions(&data_root);
+    for trinket in &mut trinkets { resolve_effects(&mut trinket.effects, &buffs); }
     Ok(trinkets)
+}
+
+/// Read numeric effects from the installed game, including DLC conditions.
+fn load_effect_definitions(root: &Path) -> std::collections::HashMap<String, serde_json::Value> {
+    fn visit(dir: &Path, out: &mut std::collections::HashMap<String, serde_json::Value>) {
+        let Ok(entries) = std::fs::read_dir(dir) else { return; };
+        let mut entries: Vec<_> = entries.flatten().collect();
+        entries.sort_by_key(|entry| entry.path());
+        for entry in entries {
+            let Ok(kind) = entry.file_type() else { continue; };
+            let path = entry.path();
+            if kind.is_dir() { visit(&path, out); }
+            else if kind.is_file() && path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".buffs.json")) {
+                if let Some(buffs) = read_json(&path).get("buffs").and_then(|v| v.as_array()) {
+                    for buff in buffs { if let Some(id) = buff.get("id").and_then(|v| v.as_str()) { out.insert(id.to_string(), buff.clone()); } }
+                }
+            }
+        }
+    }
+    let mut buffs = std::collections::HashMap::new();
+    visit(&root.join("shared/buffs"), &mut buffs);
+    visit(&root.join("dlc"), &mut buffs);
+    buffs
+}
+
+fn resolve_effects(effects: &mut [serde_json::Value], buffs: &std::collections::HashMap<String, serde_json::Value>) {
+    for effect in effects {
+        if let Some(value) = effect.as_str().and_then(|id| buffs.get(id)) { *effect = value.clone(); }
+    }
 }
 
 /// Load hero class HP stats from `heroes/<class>/<class>.info.darkest` files.
@@ -383,6 +422,8 @@ fn parse_quirk_library(path: &Path, out: &mut Vec<QuirkDef>) {
             id,
             is_positive,
             is_disease,
+            effects: quirk.get("buffs").and_then(|v| v.as_array()).cloned().unwrap_or_default(),
+            incompatible_quirks: quirk.get("incompatible_quirks").and_then(|v| v.as_array()).map(|v| v.iter().filter_map(|v| v.as_str().map(str::to_string)).collect()).unwrap_or_default(),
         });
     }
 }
@@ -418,6 +459,7 @@ fn parse_trinket_file(path: &Path, out: &mut Vec<TrinketDef>) {
                 .get("limit")
                 .and_then(|v| v.as_u64())
                 .and_then(|n| u32::try_from(n).ok()),
+            effects: entry.get("buffs").and_then(|v| v.as_array()).cloned().unwrap_or_default(),
         });
     }
 }
@@ -538,6 +580,27 @@ mod roster_capacity_tests {
         assert!(definitions
             .iter()
             .any(|d| d.class_restriction.as_deref() == Some("flagellant")));
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn effects_resolve_installed_base_and_dlc_buffs_without_dropping_missing_ids() {
+        let root = std::env::temp_dir().join(format!("hamlet-effects-{}", super::super::transaction::unique_suffix()));
+        let write = |relative: &str, value: serde_json::Value| {
+            let path = root.join(relative);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
+        };
+        write("shared/quirk/quirk_library.json", json!({"quirks":[{"id":"test","is_positive":true,"buffs":["base_effect","missing"],"incompatible_quirks":["opposite"]}]}));
+        write("trinkets/base.entries.trinkets.json", json!({"entries":[{"id":"ring","buffs":["dlc_effect"]}]}));
+        write("shared/buffs/base.buffs.json", json!({"buffs":[{"id":"base_effect","amount":0.1,"stat_type":"combat_stat_add","stat_sub_type":"attack_rating"}]}));
+        write("dlc/test/shared/buffs/test.buffs.json", json!({"buffs":[{"id":"dlc_effect","amount":-0.05,"rule_type":"rangedonly"}]}));
+        let quirks = load_quirk_library(root.to_string_lossy().into()).unwrap();
+        assert_eq!(quirks[0].effects[0]["amount"], 0.1);
+        assert_eq!(quirks[0].effects[1], "missing");
+        assert_eq!(quirks[0].incompatible_quirks, vec!["opposite"]);
+        let trinkets = load_trinket_library(root.to_string_lossy().into()).unwrap();
+        assert_eq!(trinkets[0].effects[0]["rule_type"], "rangedonly");
         std::fs::remove_dir_all(root).unwrap();
     }
 

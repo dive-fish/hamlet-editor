@@ -5,6 +5,7 @@ import { getGameData, localize, localizeEnglish } from '#lib/stores/game-data.sv
 import { getEditorLocale, t } from '#lib/i18n/index.svelte.js';
 import { CURSE_STATES } from '#lib/hero-safety.js';
 import { compareNames } from '#lib/i18n/intl.js';
+import { describeEffects } from '#lib/effect-descriptions.js';
 
 export function gameTextLocale(): string {
 	return GAME_TEXT_LOCALES[getGameData().displayLanguage];
@@ -60,6 +61,13 @@ export function trinketName(id: string): string {
 
 export function trinketEnglishName(id: string): string {
 	return localizeEnglish(`str_inventory_title_trinket${id}`, snakeToTitle(id));
+}
+
+export function trinketDescription(id: string): string {
+	const def = getGameData().trinkets.find(t => t.id === id);
+	const effects = describeEffects(def?.effects, localize);
+	const restriction = def?.class_restriction ? heroClassName(def.class_restriction) : '';
+	return [restriction, effects].filter(Boolean).join('\n');
 }
 
 const AFFLICTIONS: Record<string, string> = { depressed: 'Hopeless', berserk: 'Rapturous', color_madness: 'Refracted' };

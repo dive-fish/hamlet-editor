@@ -7,6 +7,7 @@
  */
 
 import { matchesSearch } from '#lib/search.js';
+import { cleanGameText, describeEffects } from '#lib/effect-descriptions.js';
 import { localizeEnglish } from '#lib/stores/game-data.svelte.js';
 import { snakeToTitle } from '#lib/utils.js';
 import { getGameData, localize } from '#lib/stores/game-data.svelte.js';
@@ -288,7 +289,9 @@ export function quirkName(id: string): string {
 }
 
 export function quirkDescription(id: string): string {
-	return localize(`str_quirk_description_${id}`, '');
+	const flavor = cleanGameText(localize(`str_quirk_description_${id}`, ''));
+	const effects = describeEffects(getGameData().quirks.find(q => q.id === id)?.effects, localize);
+	return [flavor, effects].filter(Boolean).join('\n');
 }
 
 export function matchesQuirkSearch(id: string, name: string, search: string): boolean {

@@ -1,7 +1,8 @@
 export type Category = 'positive' | 'negative' | 'disease';
 export type Quirk = { is_locked: boolean; is_new: boolean; mission_count: number; replaces_quirk: number; replaces_quirk_viewed: boolean; evolution_duration_remaining: number };
 export type BatchHero = { guid: string; name: string; heroClass: string; status: number; quirks: Record<string, Quirk>; weaponRank: number; armourRank: number };
-export type BatchOptions = { mode: 'add' | 'replace' | 'remove' | 'lock' | 'unlock' | 'recommended'; category: 'positive' | 'negative'; ids: string[]; lockPositive: boolean; maxEquipment: boolean };
+export type PresetRole = 'class' | 'melee' | 'ranged' | 'healer' | 'hybrid';
+export type BatchOptions = { mode: 'add' | 'replace' | 'remove' | 'lock' | 'unlock' | 'recommended'; category: 'positive' | 'negative'; ids: string[]; lockPositive: boolean; maxEquipment: boolean; role?: PresetRole };
 export type BatchPlan = { guid: string; name: string; quirks: Record<string, Quirk>; weaponRank: number; armourRank: number; errors: string[]; added: string[]; removed: string[]; locked: string[]; unlocked: string[] };
 const speed = ['luminous', 'quick_reflexes'];
 const control = [...speed, 'corvids_eye', 'on_guard', 'evasive'];
@@ -18,6 +19,18 @@ export const RECOMMENDED: Record<string, string[]> = {
  crusader: melee, highwayman: melee, hellion: melee, bounty_hunter: melee, grave_robber: melee, leper: melee, shieldbreaker: melee
 };
 export const LOW_IMPACT_NEGATIVE = ['known_cheat', 'witness', 'deviant_tastes'];
+export const ROLE_NEGATIVE = {
+ melee: [...LOW_IMPACT_NEGATIVE, 'lazy_eye', 'scattering'],
+ ranged: [...LOW_IMPACT_NEGATIVE, 'torn_rotator_cuff', 'weak_grip'],
+ healer: [...LOW_IMPACT_NEGATIVE, 'calm', 'torn_rotator_cuff'],
+ hybrid: [...LOW_IMPACT_NEGATIVE, 'bad_gambler', 'faithless']
+};
+export function classRole(heroClass: string): Exclude<PresetRole, 'class'> {
+ if (['crusader','hellion','bounty_hunter','leper','shieldbreaker','flagellant'].includes(heroClass)) return 'melee';
+ if (['arbalest','musketeer'].includes(heroClass)) return 'ranged';
+ if (heroClass === 'vestal') return 'healer';
+ return 'hybrid';
+}
 const fresh = (locked: boolean): Quirk => ({ is_locked: locked, is_new: true, mission_count: 0, replaces_quirk: 0, replaces_quirk_viewed: false, evolution_duration_remaining: 0 });
 /** Pure preview. Unknown IDs and diseases are never removed by category replacement. */
 export function planHeroBatch(hero: BatchHero, options: BatchOptions, catalog: Map<string, Category>): BatchPlan {
@@ -34,9 +47,10 @@ export function planHeroBatch(hero: BatchHero, options: BatchOptions, catalog: M
  };
  if (hero.status === 3) errors.push('Dead heroes cannot be batch edited.');
  if (options.mode === 'recommended') {
-  const ids = RECOMMENDED[hero.heroClass];
+  const role = options.role && options.role !== 'class' ? options.role : classRole(hero.heroClass);
+  const ids = !RECOMMENDED[hero.heroClass] ? undefined : options.role === 'melee' ? melee : options.role === 'ranged' ? RECOMMENDED.arbalest : options.role === 'healer' ? RECOMMENDED.vestal : RECOMMENDED[hero.heroClass];
   if (!ids) errors.push(`No preset for class: ${hero.heroClass}`);
-  else { replace('positive', ids); replace('negative', LOW_IMPACT_NEGATIVE); }
+  else { replace('positive', ids); replace('negative', ROLE_NEGATIVE[role]); }
  } else if (options.mode === 'replace') replace(options.category, [...new Set(options.ids)]);
  else for (const id of new Set(options.ids)) {
   if (catalog.get(id) !== options.category) { errors.push(`Invalid ${options.category} quirk: ${id}`); continue; }
@@ -48,8 +62,8 @@ export function planHeroBatch(hero: BatchHero, options: BatchOptions, catalog: M
  }
  const ids = Object.keys(quirks);
  if (ids.filter(id => catalog.get(id) === 'positive').length > 5) errors.push('More than 5 positive quirks.');
- // Match the existing editor: diseases share the five-entry negative cap.
- if (ids.filter(id => catalog.get(id) !== 'positive').length > 5) errors.push('More than 5 negative/unknown quirks and diseases.');
+ // Diseases are stored beside quirks but have their own in-game slots.
+ if (ids.filter(id => catalog.get(id) !== 'positive' && catalog.get(id) !== 'disease').length > 5) errors.push('More than 5 negative/unknown quirks.');
  return { guid: hero.guid, name: hero.name, quirks, weaponRank: options.maxEquipment ? 4 : hero.weaponRank, armourRank: options.maxEquipment ? 4 : hero.armourRank, errors,
  added: ids.filter(id => !hero.quirks[id]), removed: Object.keys(hero.quirks).filter(id => !quirks[id]),
  locked: ids.filter(id => quirks[id].is_locked && !hero.quirks[id]?.is_locked), unlocked: ids.filter(id => !quirks[id].is_locked && hero.quirks[id]?.is_locked) };

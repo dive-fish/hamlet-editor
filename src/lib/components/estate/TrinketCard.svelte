@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '#lib/i18n/index.svelte.js';
-	import { trinketName, gameTextLocale } from '#lib/save-labels.js';
+	import { trinketName, trinketDescription, gameTextLocale } from '#lib/save-labels.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Badge } from '#lib/components/ui/badge/index.js';
@@ -52,6 +52,7 @@
 			<div class="min-w-0">
 				<p lang={gameTextLocale()} class="truncate text-sm font-medium" title={displayName}>{displayName}</p>
 				<p class="truncate text-xs text-muted-foreground" title={id}>{id}</p>
+				<p lang={gameTextLocale()} class="whitespace-pre-line text-xs text-muted-foreground">{trinketDescription(id)}</p>
 			</div>
 		</div>
 		<Button

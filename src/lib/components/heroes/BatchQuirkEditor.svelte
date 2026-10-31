@@ -3,11 +3,12 @@
  import { Button } from '#lib/components/ui/button/index.js';
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '#lib/components/ui/dialog/index.js';
  import { getAllQuirks } from '#lib/data/quirks.js';
- import { planHeroBatch, type BatchOptions, type Category } from '#lib/hero-batch.js';
+ import { planHeroBatch, type BatchOptions, type Category, type PresetRole } from '#lib/hero-batch.js';
  import { getHeroes, getHeroRawData, addHeroQuirk, removeHeroQuirk, toggleQuirkLock, setHeroWeaponRank, setHeroArmourRank, type HeroSummary } from '#lib/stores/save-data.svelte.js';
  let { selectedHeroes }: { selectedHeroes: HeroSummary[] } = $props();
  let open = $state(false);
  let mode = $state<BatchOptions['mode']>('add');
+ let role = $state<PresetRole>('class');
  let category = $state<'positive' | 'negative'>('positive');
  let ids = $state<string[]>([]);
  let search = $state('');
@@ -16,8 +17,8 @@
  let applied = $state(false);
  const label = (zh: string, en: string) => getEditorLocale().startsWith('zh') ? zh : en;
  let catalog = $derived(new Map(getAllQuirks().map(q => [q.id, q.category as Category])));
- let available = $derived(getAllQuirks().filter(q => q.category === category && (q.id + ' ' + q.displayName).toLowerCase().includes(search.toLowerCase())));
- let plans = $derived(getHeroes().filter(h => selectedHeroes.some(selected => selected.guid === h.guid)).map(h => planHeroBatch(h, {mode, category, ids, lockPositive, maxEquipment}, catalog)));
+ let available = $derived(getAllQuirks().filter(q => q.category === category && (q.id + ' ' + q.displayName + ' ' + q.description).toLowerCase().includes(search.toLowerCase())));
+ let plans = $derived(getHeroes().filter(h => selectedHeroes.some(selected => selected.guid === h.guid)).map(h => planHeroBatch(h, {mode, category, ids, lockPositive, maxEquipment, role}, catalog)));
  let errors = $derived(plans.flatMap(p => p.errors.map(e => `${p.name}: ${e}`)));
  function apply() {
   if (!plans.length || errors.length || (mode !== 'recommended' && !ids.length && mode !== 'replace' && !maxEquipment)) return;
@@ -44,12 +45,18 @@
    <option value="remove">{label('移除所选怪癖', 'Remove selected quirks')}</option>
    <option value="lock">{label('锁定已有的所选怪癖', 'Lock selected existing quirks')}</option>
    <option value="unlock">{label('解锁已有的所选怪癖', 'Unlock selected existing quirks')}</option>
-   <option value="recommended">{label('按职业替换五黄＋三个城镇限制红癖', 'Class preset: five positives + three town restrictions')}</option>
+   <option value="recommended">{label('按打法替换五黄＋五红', 'Role preset: five positives + five negatives')}</option>
   </select></label>
+  {#if mode === 'recommended'}
+   <label class="grid gap-1 text-sm">{label('推荐打法', 'Preset role')}<select class="rounded border bg-background p-2" bind:value={role}>
+    <option value="class">{label('按职业默认打法', 'Class default')}</option><option value="melee">{label('近战输出（红癖限制远程）', 'Melee damage (ranged penalties)')}</option><option value="ranged">{label('远程输出（红癖限制近战）', 'Ranged damage (melee penalties)')}</option><option value="healer">{label('治疗辅助（红癖降低伤害）', 'Healing support (damage penalties)')}</option><option value="hybrid">{label('保留职业黄癖＋城镇限制五红', 'Class positives + five town negatives')}</option>
+   </select></label>
+   <p class="text-xs text-muted-foreground">{label('全部方案保留不能赌博、不能祈祷、不能去妓院。治疗方案仍会降低首轮输出和近战伤害；远程强盗请手动选择远程输出。', 'All presets retain the three town restrictions. Healing lowers first-round damage and melee damage. Choose ranged explicitly for a ranged Highwayman.')}</p>
+  {/if}
   {#if mode !== 'recommended'}
    <label class="grid gap-1 text-sm">{label('类别', 'Category')}<select class="rounded border bg-background p-2" bind:value={category} onchange={() => { ids = []; }}><option value="positive">{label('正面（黄色）', 'Positive')}</option><option value="negative">{label('负面（红色）', 'Negative')}</option></select></label>
    <input class="rounded border bg-background p-2" aria-label={label('搜索怪癖', 'Search quirks')} placeholder={label('搜索名称或ID', 'Search name or ID')} bind:value={search} />
-   <div class="max-h-40 overflow-y-auto rounded border p-2">{#each available as q (q.id)}<label class="flex items-center gap-2 py-1 text-sm"><input type="checkbox" value={q.id} bind:group={ids} />{q.displayName}<span class="text-muted-foreground text-xs">{q.id}</span></label>{/each}</div>
+   <div class="max-h-64 overflow-y-auto rounded border p-2">{#each available as q (q.id)}<label class="flex items-start gap-2 py-2 text-sm"><input class="mt-1" type="checkbox" value={q.id} bind:group={ids} /><span class="min-w-0"><span class="font-medium text-foreground">{q.displayName}</span><span class="ml-2 text-muted-foreground text-xs">{q.id}</span>{#if q.description}<span class="block whitespace-pre-line text-xs text-muted-foreground">{q.description}</span>{/if}</span></label>{/each}</div>
   {/if}
   <label class="flex gap-2 text-sm"><input type="checkbox" bind:checked={lockPositive} />{label('添加／替换时锁定黄色怪癖', 'Lock positive quirks when adding/replacing')}</label>
   <label class="flex gap-2 text-sm"><input type="checkbox" bind:checked={maxEquipment} />{label('武器与护甲升满（4级）', 'Max weapon and armour (rank 4)')}</label>

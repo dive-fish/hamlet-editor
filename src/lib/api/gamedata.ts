@@ -26,6 +26,8 @@ export interface QuirkDef {
 	id: string;
 	is_positive: boolean;
 	is_disease: boolean;
+	effects?: import('#lib/effect-descriptions.js').GameEffect[];
+	incompatible_quirks?: string[];
 }
 
 export interface TrinketDef {
@@ -33,6 +35,7 @@ export interface TrinketDef {
 	rarity: string | null;
 	class_restriction: string | null;
 	limit: number | null;
+	effects?: import('#lib/effect-descriptions.js').GameEffect[];
 }
 
 /**

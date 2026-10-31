@@ -128,7 +128,7 @@
 		Object.entries(hero.quirks).filter(([id]) => isDiseaseQuirk(id))
 	);
 
-	let negativeCount = $derived(negativeQuirks.length + diseaseQuirks.length);
+	let negativeCount = $derived(negativeQuirks.length);
 	let canAddPositive = $derived(positiveQuirks.length < 5);
 	let canAddNegative = $derived(negativeCount < 5);
 
@@ -307,7 +307,10 @@
 				<LockOpenIcon size={11} />
 			{/if}
 		</button>
-		<span lang={gameTextLocale()} class="flex-1 truncate text-[11px]">{quirkName(id)}</span>
+		<span lang={gameTextLocale()} class="min-w-0 flex-1 text-[11px]">
+			<span class="font-medium text-foreground">{quirkName(id)}</span>
+			{#if quirkDescription(id)}<span class="block whitespace-pre-line text-[10px] text-muted-foreground">{quirkDescription(id)}</span>{/if}
+		</span>
 		<button
 			type="button"
 			class="cursor-pointer text-muted-foreground transition-colors hover:text-red-500"
@@ -680,7 +683,7 @@
 										<span lang={gameTextLocale()}>{quirk.displayName}</span>
 										<span class="text-muted-foreground/50 text-[10px]">{quirk.id}</span>
 										{#if quirk.description}
-											<span class="text-muted-foreground line-clamp-2 block text-[10px] leading-snug" lang={gameTextLocale()} title={quirk.description}>{quirk.description}</span>
+											<span class="text-muted-foreground whitespace-pre-line block text-[10px] leading-snug" lang={gameTextLocale()}>{quirk.description}</span>
 										{/if}
 									</span>
 								</button>

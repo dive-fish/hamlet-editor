@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { t, describeMessage } from '#lib/i18n/index.svelte.js';
 	import { formatNumber, compareNames } from '#lib/i18n/intl.js';
-	import { trinketName, trinketEnglishName, gameTextLocale } from '#lib/save-labels.js';
+	import { trinketName, trinketEnglishName, trinketDescription, gameTextLocale } from '#lib/save-labels.js';
 	import { matchesSearch } from '#lib/search.js';
 	import { Popover, PopoverContent, PopoverTrigger } from '#lib/components/ui/popover/index.js';
 	import {
@@ -89,8 +89,8 @@
 		? gameData.trinkets.map((entry) => entry.id)
 		: [...ANCESTOR_TRINKETS, ...BOSS_DROP_TRINKETS, ...CORE_STACKABLE_TRINKETS])
 		.sort((a, b) => compareNames(trinketName(a), a, trinketName(b), b, gameTextLocale())));
-	let filteredInventory = $derived(inventory.filter(({ id }) => matchesSearch(search, id, trinketName(id), trinketEnglishName(id))));
-	let filteredCatalogue = $derived(catalogue.filter((id) => matchesSearch(search, id, trinketName(id), trinketEnglishName(id))));
+	let filteredInventory = $derived(inventory.filter(({ id }) => matchesSearch(search, id, trinketName(id), trinketEnglishName(id), trinketDescription(id))));
+	let filteredCatalogue = $derived(catalogue.filter((id) => matchesSearch(search, id, trinketName(id), trinketEnglishName(id), trinketDescription(id))));
 	let showUnequip = $derived(!!value && matchesSearch(search, 'unequip', t('heroes.unequipToInventory')));
 
 	$effect(() => { if (!open) search = ''; });
@@ -120,7 +120,7 @@
 			</Button>
 		{/snippet}
 	</PopoverTrigger>
-	<PopoverContent data-testid="trinket-picker" class="w-72 max-h-(--bits-popover-content-available-height) p-0" align="start">
+	<PopoverContent data-testid="trinket-picker" class="w-96 max-w-[90vw] max-h-(--bits-popover-content-available-height) p-0" align="start">
 		<Command shouldFilter={false} class="min-h-0">
 			<CommandInput bind:value={search} placeholder={t('heroes.searchTrinkets')} class="h-8 text-xs" />
 			<CommandList class="max-h-64 min-h-0">
@@ -139,7 +139,7 @@
 						{#each filteredInventory as trinket (trinket.id)}
 							<CommandItem value={`inventory:${trinket.id}`} disabled={!!blockedReason(trinket.id)} onSelect={() => handleSelect(trinket.id, 'inventory')} class="text-xs">
 								{@const reason = blockedReason(trinket.id)}
-								<span><span lang={gameTextLocale()}>{trinketName(trinket.id)}</span>{trinket.amount > 1 ? ` (${formatNumber(trinket.amount)})` : ''}{#if reason}<small class="block">{describeMessage(reason)}</small>{/if}</span>
+								<span><span class="font-medium text-foreground" lang={gameTextLocale()}>{trinketName(trinket.id)}</span>{trinket.amount > 1 ? ` (${formatNumber(trinket.amount)})` : ''}<small class="block whitespace-pre-line text-muted-foreground" lang={gameTextLocale()}>{trinketDescription(trinket.id)}</small>{#if reason}<small class="block">{describeMessage(reason)}</small>{/if}</span>
 							</CommandItem>
 						{/each}
 					</CommandGroup>
@@ -150,7 +150,7 @@
 					{#each filteredCatalogue as id (id)}
 						<CommandItem value={`catalogue:${id}`} disabled={!!blockedReason(id)} onSelect={() => handleSelect(id, 'catalogue')} class="text-xs">
 							{@const reason = blockedReason(id)}
-							<span><span lang={gameTextLocale()}>{trinketName(id)}</span>{#if reason}<small class="block">{describeMessage(reason)}</small>{/if}</span>
+							<span><span class="font-medium text-foreground" lang={gameTextLocale()}>{trinketName(id)}</span><small class="block whitespace-pre-line text-muted-foreground" lang={gameTextLocale()}>{trinketDescription(id)}</small>{#if reason}<small class="block">{describeMessage(reason)}</small>{/if}</span>
 						</CommandItem>
 					{/each}
 				</CommandGroup>
@@ -159,3 +159,4 @@
 		</Command>
 	</PopoverContent>
 </Popover>
+{#if value && trinketDescription(value)}<p lang={gameTextLocale()} class="mt-1 whitespace-pre-line text-xs text-muted-foreground">{trinketDescription(value)}</p>{/if}
