@@ -42,6 +42,10 @@ pub struct TrinketDef {
     pub limit: Option<u32>,
     #[serde(default)]
     pub effects: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub set_id: Option<String>,
+    #[serde(default)]
+    pub set_effects: Vec<serde_json::Value>,
 }
 
 // ---------------------------------------------------------------------------
@@ -155,12 +159,10 @@ pub fn load_trinket_library(game_path: String) -> Result<Vec<TrinketDef>, AppErr
     let data_root = resolve_data_root(Path::new(&game_path));
     let mut trinkets: Vec<TrinketDef> = Vec::new();
 
-    // Base game trinkets
-    let base = data_root.join("trinkets/base.entries.trinkets.json");
-    parse_trinket_file(&base, &mut trinkets);
+    let mut sets: std::collections::HashMap<String, Vec<serde_json::Value>> = std::collections::HashMap::new();
 
     // Feature DLCs nest their trinkets below features/<feature>/trinkets/.
-    fn visit(dir: &Path, out: &mut Vec<TrinketDef>) {
+    fn visit(dir: &Path, out: &mut Vec<TrinketDef>, sets: &mut std::collections::HashMap<String, Vec<serde_json::Value>>) {
         if let Ok(entries) = std::fs::read_dir(dir) {
             let mut entries: Vec<_> = entries.flatten().collect();
             entries.sort_by_key(|entry| entry.path());
@@ -170,7 +172,7 @@ pub fn load_trinket_library(game_path: String) -> Result<Vec<TrinketDef>, AppErr
                     continue;
                 };
                 if kind.is_dir() {
-                    visit(&path, out);
+                    visit(&path, out, sets);
                 } else if kind.is_file()
                     && path
                         .file_name()
@@ -178,14 +180,25 @@ pub fn load_trinket_library(game_path: String) -> Result<Vec<TrinketDef>, AppErr
                         .is_some_and(|name| name.ends_with(".entries.trinkets.json"))
                 {
                     parse_trinket_file(&path, out);
+                } else if kind.is_file() && path.file_name().and_then(|n| n.to_str()).is_some_and(|n| n.ends_with(".sets.trinkets.json")) {
+                    if let Some(defs) = read_json(&path).get("sets").and_then(|v| v.as_array()) {
+                        for def in defs { if let Some(id) = def.get("id").and_then(|v| v.as_str()) {
+                            sets.insert(id.to_string(), def.get("buffs").and_then(|v| v.as_array()).cloned().unwrap_or_default());
+                        } }
+                    }
                 }
             }
         }
     }
-    visit(&data_root.join("dlc"), &mut trinkets);
+    visit(&data_root.join("trinkets"), &mut trinkets, &mut sets);
+    visit(&data_root.join("dlc"), &mut trinkets, &mut sets);
 
     let buffs = load_effect_definitions(&data_root);
-    for trinket in &mut trinkets { resolve_effects(&mut trinket.effects, &buffs); }
+    for trinket in &mut trinkets {
+        resolve_effects(&mut trinket.effects, &buffs);
+        trinket.set_effects = trinket.set_id.as_ref().and_then(|id| sets.get(id)).cloned().unwrap_or_default();
+        resolve_effects(&mut trinket.set_effects, &buffs);
+    }
     Ok(trinkets)
 }
 
@@ -460,6 +473,8 @@ fn parse_trinket_file(path: &Path, out: &mut Vec<TrinketDef>) {
                 .and_then(|v| v.as_u64())
                 .and_then(|n| u32::try_from(n).ok()),
             effects: entry.get("buffs").and_then(|v| v.as_array()).cloned().unwrap_or_default(),
+            set_id: entry.get("set_id").and_then(|v| v.as_str()).map(str::to_string),
+            set_effects: Vec::new(),
         });
     }
 }
@@ -592,7 +607,8 @@ mod roster_capacity_tests {
             std::fs::write(path, serde_json::to_vec(&value).unwrap()).unwrap();
         };
         write("shared/quirk/quirk_library.json", json!({"quirks":[{"id":"test","is_positive":true,"buffs":["base_effect","missing"],"incompatible_quirks":["opposite"]}]}));
-        write("trinkets/base.entries.trinkets.json", json!({"entries":[{"id":"ring","buffs":["dlc_effect"]}]}));
+        write("trinkets/base.entries.trinkets.json", json!({"entries":[{"id":"ring","set_id":"test_set","buffs":["dlc_effect"]}]}));
+        write("dlc/test/trinkets/test.sets.trinkets.json", json!({"sets":[{"id":"test_set","buffs":["base_effect"]}]}));
         write("shared/buffs/base.buffs.json", json!({"buffs":[{"id":"base_effect","amount":0.1,"stat_type":"combat_stat_add","stat_sub_type":"attack_rating"}]}));
         write("dlc/test/shared/buffs/test.buffs.json", json!({"buffs":[{"id":"dlc_effect","amount":-0.05,"rule_type":"rangedonly"}]}));
         let quirks = load_quirk_library(root.to_string_lossy().into()).unwrap();
@@ -601,6 +617,7 @@ mod roster_capacity_tests {
         assert_eq!(quirks[0].incompatible_quirks, vec!["opposite"]);
         let trinkets = load_trinket_library(root.to_string_lossy().into()).unwrap();
         assert_eq!(trinkets[0].effects[0]["rule_type"], "rangedonly");
+        assert_eq!(trinkets[0].set_effects[0]["amount"], 0.1);
         std::fs::remove_dir_all(root).unwrap();
     }
 

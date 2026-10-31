@@ -36,6 +36,8 @@ export interface TrinketDef {
 	class_restriction: string | null;
 	limit: number | null;
 	effects?: import('#lib/effect-descriptions.js').GameEffect[];
+	set_id?: string | null;
+	set_effects?: import('#lib/effect-descriptions.js').GameEffect[];
 }
 
 /**

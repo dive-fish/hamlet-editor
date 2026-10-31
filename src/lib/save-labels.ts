@@ -67,7 +67,9 @@ export function trinketDescription(id: string): string {
 	const def = getGameData().trinkets.find(t => t.id === id);
 	const effects = describeEffects(def?.effects, localize);
 	const restriction = def?.class_restriction ? heroClassName(def.class_restriction) : '';
-	return [restriction, effects].filter(Boolean).join('\n');
+	const setEffects = describeEffects(def?.set_effects, localize);
+	const set = setEffects ? `${getEditorLocale().startsWith('zh') ? '套装效果（需同时装备同套饰品）' : 'Set bonus (requires matching trinkets)'}:\n${setEffects}` : '';
+	return [restriction, effects, set].filter(Boolean).join('\n');
 }
 
 const AFFLICTIONS: Record<string, string> = { depressed: 'Hopeless', berserk: 'Rapturous', color_madness: 'Refracted' };
