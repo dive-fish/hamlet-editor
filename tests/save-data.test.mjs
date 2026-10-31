@@ -136,3 +136,21 @@ test('current profile survives empty detection and is not duplicated when detect
 	assert.deepEqual(withCurrentProfile(current, '/manual/profile_0', 'profile_0', false), current);
 	assert.deepEqual(withCurrentProfile([], '', '', false), []);
 });
+
+test('equipment rank updates both roster and authoritative per-hero purchases',()=>{
+ const raw=store.getHeroRawData('1');raw.heroClass='crusader';
+ store.loadUpgrades({base_root:{purchases:{
+  0:{instance_number:2,tree_id:'###crusader.weapon',requirement_code:'0',is_purchased:true}
+ }}});
+ const selected=structuredClone(raw.skills);
+ const foreign=structuredClone(Object.fromEntries(Object.entries(store.getSaveData().upgrades.base_root.purchases).filter(([,p])=>p.instance_number!==1)));
+ store.setHeroWeaponRank('1',4);store.setHeroArmourRank('1',4);
+ assert.equal(raw.weapon_rank,4);assert.equal(raw.armour_rank,4);
+ for(const tree of ['weapon','armour']) assert.deepEqual(Object.values(store.getSaveData().upgrades.base_root.purchases).filter(p=>p.instance_number===1&&p.tree_id===`###crusader.${tree}`&&p.is_purchased).map(p=>p.requirement_code).sort(),['0','1','2','3']);
+ assert.deepEqual(raw.skills,selected);
+ for(const [key,p] of Object.entries(foreign))assert.deepEqual(store.getSaveData().upgrades.base_root.purchases[key],p);
+ assert(store.getSaveData().dirtyFiles.has('persist.upgrades.json'));
+ const upgraded=structuredClone(store.getSaveData().upgrades);
+ store.setHeroWeaponRank('1',4);store.setHeroArmourRank('1',4);
+ assert.deepEqual(store.getSaveData().upgrades,upgraded);
+});

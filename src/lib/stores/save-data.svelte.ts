@@ -10,7 +10,7 @@ import type { MessageDescriptor } from '#lib/i18n/index.svelte.js';
 import { compareIds } from '#lib/i18n/intl.js';
 import { compareBuildingNames } from '#lib/save-labels.js';
 import { equipTrinket, returnTrinkets, type TrinketSource } from '#lib/trinkets.js';
-import { planMaxOwnedSkills } from '#lib/skill-upgrades.js';
+import { planMaxOwnedSkills, planEquipmentRank } from '#lib/skill-upgrades.js';
 import { getAvailableCombatSkills } from '#lib/stores/game-data.svelte.js';
 import { parseInteger, validateHeroName } from '#lib/input-validation.js';
 import { updateWallet, updateEstateItem } from '#lib/estate.js';
@@ -392,26 +392,24 @@ export function setHeroLevel(guid: string, level: number) {
 	markDirty('persist.roster.json');
 }
 
-/** Update a hero's weapon rank. */
-export function setHeroWeaponRank(guid: string, rank: number) {
-	const raw = getHeroRawData(guid);
-	if (!raw) return;
-	const parsed = parseInteger(rank, 0, 4);
-	if (parsed.error !== undefined || raw.weapon_rank === parsed.value) return;
-	raw.weapon_rank = parsed.value;
-	markDirty('persist.roster.json');
+/** Keep both equipment ranks and authoritative upgrade purchases consistent. */
+function setHeroEquipmentRank(guid: string, kind: 'weapon' | 'armour', rank: number) {
+ const raw = getHeroRawData(guid);
+ const parsed = parseInteger(rank, 0, 4);
+ if (!raw || !upgrades || parsed.error !== undefined || !Object.hasOwn(CLASS_DISPLAY_NAMES, raw.heroClass)) return;
+ const plan = planEquipmentRank(upgrades.base_root.purchases, guid, raw.heroClass, kind, parsed.value);
+ if (!plan) return;
+ for (const update of plan.updates) upgrades.base_root.purchases[update.key].is_purchased = update.purchased;
+ let next = 0;
+ for (const key of Object.keys(upgrades.base_root.purchases)) if (/^\d+$/.test(key)) next = Math.max(next, Number(key) + 1);
+ for (const purchase of plan.additions) upgrades.base_root.purchases[String(next++)] = purchase;
+ if (plan.updates.length || plan.additions.length) markDirty('persist.upgrades.json');
+ const field = kind === 'weapon' ? 'weapon_rank' : 'armour_rank';
+ if (raw[field] !== parsed.value) { raw[field] = parsed.value; markDirty('persist.roster.json'); }
 }
 
-/** Update a hero's armour rank. */
-export function setHeroArmourRank(guid: string, rank: number) {
-	const raw = getHeroRawData(guid);
-	if (!raw) return;
-	const parsed = parseInteger(rank, 0, 4);
-	if (parsed.error !== undefined || raw.armour_rank === parsed.value) return;
-	raw.armour_rank = parsed.value;
-	markDirty('persist.roster.json');
-}
-
+export function setHeroWeaponRank(guid: string, rank: number) { setHeroEquipmentRank(guid, 'weapon', rank); }
+export function setHeroArmourRank(guid: string, rank: number) { setHeroEquipmentRank(guid, 'armour', rank); }
 const VIRTUE_IDS = new Set(['courageous', 'focused', 'powerful', 'vigorous', 'stalwart']);
 
 /** Update a hero's affliction or virtue. Clears the opposing field automatically. */

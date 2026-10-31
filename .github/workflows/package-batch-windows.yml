@@ -32,7 +32,7 @@ jobs:
       - name: Check frontend and batch logic
         run: |
           pnpm check
-          node --test tests/hero-batch.test.mjs tests/skill-upgrades.test.mjs
+          node --test tests/hero-batch.test.mjs tests/skill-upgrades.test.mjs tests/save-data.test.mjs
       - name: Build Windows installer
         run: pnpm tauri build --bundles nsis
       - name: Assemble portable package

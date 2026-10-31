@@ -28,7 +28,7 @@
    for (const id of p.removed) removeHeroQuirk(p.guid, id);
    for (const id of p.added) addHeroQuirk(p.guid, id, p.quirks[id]);
    for (const id of [...p.locked, ...p.unlocked]) if (raw.quirks[id] && raw.quirks[id].is_locked !== p.quirks[id].is_locked) toggleQuirkLock(p.guid, id);
-   setHeroWeaponRank(p.guid, p.weaponRank); setHeroArmourRank(p.guid, p.armourRank);
+   if (maxEquipment) { setHeroWeaponRank(p.guid, p.weaponRank); setHeroArmourRank(p.guid, p.armourRank); }
   }
   applied = true; open = false;
  }
