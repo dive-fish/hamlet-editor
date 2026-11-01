@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { t } from '#lib/i18n/index.svelte.js';
+	import { formatNumber } from '#lib/i18n/intl.js';
 	import { trinketName, trinketDescription, gameTextLocale } from '#lib/save-labels.js';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
@@ -10,11 +11,13 @@
 
 	let {
 		id,
+		amount = 1,
 		type = 'trinket',
 		gamePath,
 		onremove
 	}: {
 		id: string;
+		amount?: number;
 		type?: string;
 		gamePath?: string;
 		onremove?: (id: string) => void;
@@ -51,6 +54,7 @@
 			{/if}
 			<div class="min-w-0">
 				<p lang={gameTextLocale()} class="truncate text-sm font-medium" title={displayName}>{displayName}</p>
+				{#if amount > 1}<Badge variant="outline">×{formatNumber(amount)}</Badge>{/if}
 				<p class="truncate text-xs text-muted-foreground" title={id}>{id}</p>
 				<p lang={gameTextLocale()} class="whitespace-pre-line text-xs text-muted-foreground">{trinketDescription(id)}</p>
 			</div>

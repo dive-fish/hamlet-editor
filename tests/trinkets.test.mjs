@@ -18,7 +18,7 @@ const { describeMessage } = await server.ssrLoadModule('/src/lib/i18n/index.svel
 const store = await server.ssrLoadModule('/src/lib/stores/save-data.svelte.ts');
 const gameData = await server.ssrLoadModule('/src/lib/stores/game-data.svelte.ts');
 const { runPreSaveValidation } = await server.ssrLoadModule('/src/lib/validation.ts');
-const { equipTrinket, inventoryTrinkets, trinketEquipBlockReason, catalogueTrinket } = await server.ssrLoadModule('/src/lib/trinkets.ts');
+const { equipTrinket, inventoryTrinkets, trinketEquipBlockReason, catalogueTrinket, addAllCatalogueTrinkets } = await server.ssrLoadModule('/src/lib/trinkets.ts');
 const reference = {
 	...JSON.parse(await readFile(new URL('./fixtures/safety-reference.json', import.meta.url), 'utf8')),
 	...JSON.parse(await readFile(new URL('./fixtures/dismiss-reference.json', import.meta.url), 'utf8'))
@@ -28,6 +28,21 @@ const metadata = { added_buffs: 3, hero_name: 'Bonel', previous_trinket_id: 'bef
 const item = (id, amount = 1) => ({ id, type: 'trinket', amount });
 const hero = () => ({ heroClass: 'crusader', trinkets: { items: {} } });
 const estate = (items = {}) => ({ base_root: { trinkets: { items } } });
+
+test('bulk catalogue addition deduplicates definitions and preserves sparse storage and metadata', () => {
+ const old = {...item('existing', 4), added_buffs: 7};
+ const data = estate({'12': old});
+ assert.equal(addAllCatalogueTrinkets(data, [{id:'a'},{id:'b'},{id:'a'}], 3), 2);
+ assert.deepEqual(data.base_root.trinkets.items['12'], old);
+ assert.equal(data.base_root.trinkets.items['13'].amount, 3);
+ assert.equal(data.base_root.trinkets.items['14'].id, 'b');
+ assert.equal(data.base_root.trinkets.items['13'].added_buffs, 0);
+ const before = structuredClone(data);
+ for (const quantity of [0, 100, 1.5, NaN]) assert.equal(addAllCatalogueTrinkets(data, [{id:'a'}], quantity), 0);
+ assert.deepEqual(data, before);
+ assert.equal(addAllCatalogueTrinkets(null, [{id:'a'}], 1), 0);
+ assert.equal(addAllCatalogueTrinkets(data, [], 1), 0);
+});
 
 beforeEach(() => {
 	store.resetSaveData();

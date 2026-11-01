@@ -6,6 +6,18 @@ import { equippedTrinkets } from '#lib/hero-safety.js';
 
 export type TrinketSource = 'inventory' | 'catalogue';
 
+/** Add the whole loaded catalogue atomically, preserving existing storage. */
+export function addAllCatalogueTrinkets(estate: EstateData | null, definitions: readonly TrinketDef[], quantity: number): number {
+	const items = storageItems(estate);
+	const ids = [...new Set(definitions.map(def => def.id).filter(id => typeof id === 'string' && id.length > 0))];
+	if (!items || !ids.length || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) return 0;
+	let nextKey = Object.keys(items).reduce((max, key) => Math.max(max, Number(key)), -1) + 1;
+	if (nextKey + ids.length > 2147483647) return 0;
+	const additions = ids.map(id => ({ ...catalogueTrinket(id, items), amount: quantity }));
+	for (const item of additions) items[String(nextKey++)] = item;
+	return ids.length;
+}
+
 /** Shared picker and mutation guard, including the other slot on the same hero. */
 export function trinketEquipBlockReason(id: string, heroClass: string, definitions: readonly TrinketDef[], otherIds: readonly string[] = []): MessageDescriptor | null {
 	const definition = definitions.find((entry) => entry.id === id);

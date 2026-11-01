@@ -7,6 +7,7 @@
 	import IntegerInput from '#lib/components/IntegerInput.svelte';
 	import WalletCard from '#lib/components/estate/WalletCard.svelte';
 	import TrinketCard from '#lib/components/estate/TrinketCard.svelte';
+	import BatchTrinketAdder from '#lib/components/estate/BatchTrinketAdder.svelte';
 	import * as Card from '#lib/components/ui/card/index.js';
 	import { Button } from '#lib/components/ui/button/index.js';
 	import { Input } from '#lib/components/ui/input/index.js';
@@ -369,6 +370,7 @@
 						</Badge>
 					{/if}
 					<TrinketPicker onselect={handleTrinketSelected} placeholder={t('estate.addTrinket')} />
+					<BatchTrinketAdder />
 					<div class="relative">
 						<MagnifyingGlassIcon
 							class="text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2"
@@ -401,6 +403,7 @@
 						{#each filteredTrinkets as trinket (trinket.key)}
 							<TrinketCard
 								id={trinket.id}
+								amount={trinket.amount}
 								type={trinket.type}
 								gamePath={settings.gamePath}
 								onremove={handleRemoveTrinket}
