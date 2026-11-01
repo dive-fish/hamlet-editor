@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { t, describeMessage, type MessageDescriptor } from '#lib/i18n/index.svelte.js';
+	import { t, describeMessage, getEditorLocale, type MessageDescriptor } from '#lib/i18n/index.svelte.js';
+	import { getGameData } from '#lib/stores/game-data.svelte.js';
+	import { trinketCategory, trinketCategoryLabel } from '#lib/trinket-categories.js';
 	import { commitChangedValue } from '#lib/control-events.js';
 	import { validateHeroName } from '#lib/input-validation.js';
 	import { WALLET_MAX } from '#lib/estate.js';
@@ -108,6 +110,9 @@
 
 	// Add Trinket picker state
 	let trinketSearch = $state('');
+	let storageCategory = $state('all');
+	const gameData = getGameData();
+	let rarityById = $derived(new Map(gameData.trinkets.map(def => [def.id, trinketCategory(def.rarity)])));
 
 	// ----- Derived data -----
 
@@ -141,10 +146,9 @@
 	});
 
 	/** Filtered trinkets based on search query. */
+	let storageCategories = $derived([...new Set(trinkets.map(item => rarityById.get(item.id) ?? 'unknown'))].sort());
 	let filteredTrinkets = $derived(
-		trinketSearch.trim().length === 0
-			? trinkets
-			: trinkets.filter((item) => matchesSearch(trinketSearch, trinketName(item.id), trinketEnglishName(item.id), item.id))
+		trinkets.filter(item => (storageCategory === 'all' || (rarityById.get(item.id) ?? 'unknown') === storageCategory) && (!trinketSearch.trim() || matchesSearch(trinketSearch, trinketName(item.id), trinketEnglishName(item.id), item.id)))
 	);
 
 	/** Estate items (invitations and blood). */
@@ -371,6 +375,7 @@
 					{/if}
 					<TrinketPicker onselect={handleTrinketSelected} placeholder={t('estate.addTrinket')} />
 					<BatchTrinketAdder />
+					<select aria-label={getEditorLocale().startsWith('zh') ? '仓库饰品分类' : 'Storage trinket category'} class="h-8 rounded border bg-background px-2 text-xs" bind:value={storageCategory}><option value="all">{getEditorLocale().startsWith('zh') ? '全部分类' : 'All categories'}</option>{#each storageCategories as category}<option value={category}>{trinketCategoryLabel(category, getEditorLocale().startsWith('zh'))}</option>{/each}</select>
 					<div class="relative">
 						<MagnifyingGlassIcon
 							class="text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2"

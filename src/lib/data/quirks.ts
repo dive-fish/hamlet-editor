@@ -7,6 +7,7 @@
  */
 
 import { matchesSearch } from '#lib/search.js';
+import { isPrismatic } from '#lib/prismatic-quirks.js';
 import { cleanGameText, describeEffects } from '#lib/effect-descriptions.js';
 import { localizeEnglish } from '#lib/stores/game-data.svelte.js';
 import { snakeToTitle } from '#lib/utils.js';
@@ -297,5 +298,5 @@ export function quirkDescription(id: string): string {
 export function matchesQuirkSearch(id: string, name: string, search: string): boolean {
 	// Search aliases: str_quirk_name_, hero_class_name_, str_inventory_title_trinket.
 	// Keep in sync with SEARCH_ALIAS_PREFIXES in src-tauri/src/commands/names.rs and save-labels.ts.
-	return matchesSearch(search, name, localizeEnglish(`str_quirk_name_${id}`, snakeToTitle(id)), id);
+	return matchesSearch(search, name, localizeEnglish(`str_quirk_name_${id}`, snakeToTitle(id)), id, isPrismatic(id) ? '棱镜 菱镜 prismatic' : '');
 }

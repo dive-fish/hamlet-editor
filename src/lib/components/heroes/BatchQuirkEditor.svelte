@@ -2,7 +2,9 @@
  import { getEditorLocale } from '#lib/i18n/index.svelte.js';
  import { Button } from '#lib/components/ui/button/index.js';
  import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '#lib/components/ui/dialog/index.js';
- import { getAllQuirks } from '#lib/data/quirks.js';
+ import { getAllQuirks, matchesQuirkSearch } from '#lib/data/quirks.js';
+ import { isPrismatic, prismaticOwner } from '#lib/prismatic-quirks.js';
+ let prismaticOnly = $state(false);
  import { planHeroBatch, type BatchOptions, type Category, type PresetRole } from '#lib/hero-batch.js';
  import { getHeroes, getHeroRawData, addHeroQuirk, removeHeroQuirk, toggleQuirkLock, setHeroWeaponRank, setHeroArmourRank, type HeroSummary } from '#lib/stores/save-data.svelte.js';
  let { selectedHeroes }: { selectedHeroes: HeroSummary[] } = $props();
@@ -17,9 +19,14 @@
  let applied = $state(false);
  const label = (zh: string, en: string) => getEditorLocale().startsWith('zh') ? zh : en;
  let catalog = $derived(new Map(getAllQuirks().map(q => [q.id, q.category as Category])));
- let available = $derived(getAllQuirks().filter(q => q.category === category && (q.id + ' ' + q.displayName + ' ' + q.description).toLowerCase().includes(search.toLowerCase())));
+ let available = $derived(getAllQuirks().filter(q => q.category === category && (category !== 'positive' || !prismaticOnly || isPrismatic(q.id)) && (matchesQuirkSearch(q.id, q.displayName, search) || (!!search && q.description.toLowerCase().includes(search.toLowerCase())))));
  let plans = $derived(getHeroes().filter(h => selectedHeroes.some(selected => selected.guid === h.guid)).map(h => planHeroBatch(h, {mode, category, ids, lockPositive, maxEquipment, role}, catalog)));
- let errors = $derived(plans.flatMap(p => p.errors.map(e => `${p.name}: ${e}`)));
+ let errors = $derived.by(() => {
+  const result = plans.flatMap(p => p.errors.map(e => `${p.name}: ${e}`));
+  const finalHeroes = getHeroes().map(h => ({...h, quirks: plans.find(p => p.guid === h.guid)?.quirks ?? h.quirks}));
+  for (const p of plans) for (const id of p.added) if (prismaticOwner(finalHeroes, p.guid, id)) result.push(`${p.name}: ${label('棱镜怪癖全队唯一，不能重复添加', 'Prismatic quirk already assigned to another living hero')} (${id})`);
+  return result;
+ });
  function apply() {
   if (!plans.length || errors.length || (mode !== 'recommended' && !ids.length && mode !== 'replace' && !maxEquipment)) return;
   // All heroes are validated before any mutation. Existing store methods retain dirty tracking.
@@ -56,6 +63,7 @@
   {#if mode !== 'recommended'}
    <label class="grid gap-1 text-sm">{label('类别', 'Category')}<select class="rounded border bg-background p-2" bind:value={category} onchange={() => { ids = []; }}><option value="positive">{label('正面（黄色）', 'Positive')}</option><option value="negative">{label('负面（红色）', 'Negative')}</option></select></label>
    <input class="rounded border bg-background p-2" aria-label={label('搜索怪癖', 'Search quirks')} placeholder={label('搜索名称或ID', 'Search name or ID')} bind:value={search} />
+   {#if category === 'positive'}<label class="flex gap-2 text-xs"><input type="checkbox" bind:checked={prismaticOnly} />{label('仅显示棱镜／菱镜怪癖（全队唯一、不可锁定）', 'Prismatic only (unique in roster; cannot lock)')}</label>{/if}
    <div class="max-h-64 overflow-y-auto rounded border p-2">{#each available as q (q.id)}<label class="flex items-start gap-2 py-2 text-sm"><input class="mt-1" type="checkbox" value={q.id} bind:group={ids} /><span class="min-w-0"><span class="font-medium text-foreground">{q.displayName}</span><span class="ml-2 text-muted-foreground text-xs">{q.id}</span>{#if q.description}<span class="block whitespace-pre-line text-xs text-muted-foreground">{q.description}</span>{/if}</span></label>{/each}</div>
   {/if}
   <label class="flex gap-2 text-sm"><input type="checkbox" bind:checked={lockPositive} />{label('添加／替换时锁定黄色怪癖', 'Lock positive quirks when adding/replacing')}</label>

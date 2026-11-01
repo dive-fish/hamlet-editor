@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { getHeroes } from '#lib/stores/save-data.svelte.js';
+	import { isPrismatic, prismaticOwner } from '#lib/prismatic-quirks.js';
+	let prismaticOnly = $state(false);
 	import { mergeProps } from 'bits-ui';
 	import { showMessageError } from '#lib/i18n/notifications.js';
 	import { describeMessage, t, getEditorLocale, type MessageDescriptor } from '#lib/i18n/index.svelte.js';
@@ -194,6 +197,7 @@
 		const existingIds = new Set(Object.keys(hero.quirks));
 		const q = quirkSearch;
 		return allQuirks.filter((quirk) => {
+			if (quirkPickerCategory === 'positive' && prismaticOnly && !isPrismatic(quirk.id)) return false;
 			if (existingIds.has(quirk.id) || !canPickQuirk(quirk.id)) return false;
 			if (quirkPickerCategory === 'positive' && quirk.category !== 'positive') return false;
 			if (quirkPickerCategory === 'negative' && quirk.category === 'positive') return false;
@@ -298,6 +302,7 @@
 			type="button"
 			class="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
 			onclick={() => toggleQuirkLock(hero.guid, id)}
+			disabled={isPrismatic(id)}
 			title={quirk.is_locked ? t('heroes.unlockQuirkTitle') : t('heroes.lockQuirkTitle')}
 			aria-label={t('heroes.lockQuirk', { locked: quirk.is_locked ? 'yes' : 'no', name: quirkName(id) })}
 		>
@@ -665,12 +670,15 @@
 							class="mb-2 h-7 text-xs"
 							autofocus
 						/>
+						{#if quirkPickerCategory === 'positive'}<label class="mb-2 flex gap-2 text-xs"><input type="checkbox" bind:checked={prismaticOnly} />{getEditorLocale().startsWith('zh') ? '仅显示棱镜／菱镜怪癖（全队唯一、不可锁定）' : 'Prismatic only (unique in roster; cannot lock)'}</label>{/if}
 						<div class="max-h-50 overflow-y-auto">
 							{#each filteredPickerQuirks.slice(0, 50) as quirk (quirk.id)}
 								<button
 									type="button"
 									class="flex w-full cursor-pointer items-start gap-2 px-2 py-1 text-left text-[11px] transition-colors hover:bg-muted"
 									onclick={() => pickQuirk(quirk.id)}
+									disabled={!!prismaticOwner(getHeroes(), hero.guid, quirk.id)}
+									title={prismaticOwner(getHeroes(), hero.guid, quirk.id) ? (getEditorLocale().startsWith('zh') ? '全队唯一：其他存活英雄已持有' : 'Another living hero already owns this quirk') : undefined}
 								>
 									<span
 										class="mt-1 h-1.5 w-1.5 shrink-0 rounded-full {quirk.category === 'positive'

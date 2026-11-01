@@ -1,3 +1,4 @@
+import { isPrismatic } from './prismatic-quirks.ts';
 export type Category = 'positive' | 'negative' | 'disease';
 export type Quirk = { is_locked: boolean; is_new: boolean; mission_count: number; replaces_quirk: number; replaces_quirk_viewed: boolean; evolution_duration_remaining: number };
 export type BatchHero = { guid: string; name: string; heroClass: string; status: number; quirks: Record<string, Quirk>; weaponRank: number; armourRank: number };
@@ -42,8 +43,9 @@ export function planHeroBatch(hero: BatchHero, options: BatchOptions, catalog: M
  };
  const put = (id: string, category: 'positive' | 'negative') => {
   if (catalog.get(id) !== category || id.startsWith('disease_vampire_')) { errors.push(`Invalid ${category} quirk: ${id}`); return; }
-  quirks[id] ??= fresh(category === 'positive' && options.lockPositive);
-  if (category === 'positive' && options.lockPositive) quirks[id].is_locked = true;
+  quirks[id] ??= fresh(category === 'positive' && options.lockPositive && !isPrismatic(id));
+  if (isPrismatic(id)) quirks[id].is_locked = false;
+  else if (category === 'positive' && options.lockPositive) quirks[id].is_locked = true;
  };
  if (hero.status === 3) errors.push('Dead heroes cannot be batch edited.');
  if (options.mode === 'recommended') {
@@ -57,7 +59,7 @@ export function planHeroBatch(hero: BatchHero, options: BatchOptions, catalog: M
   if (options.mode === 'add') put(id, options.category);
   else if (quirks[id]) {
    if (options.mode === 'remove') delete quirks[id];
-   else quirks[id].is_locked = options.mode === 'lock';
+   else quirks[id].is_locked = options.mode === 'lock' && !isPrismatic(id);
   }
  }
  const ids = Object.keys(quirks);

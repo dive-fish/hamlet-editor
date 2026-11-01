@@ -11,6 +11,7 @@ import { compareIds } from '#lib/i18n/intl.js';
 import { compareBuildingNames } from '#lib/save-labels.js';
 import { equipTrinket, returnTrinkets, type TrinketSource } from '#lib/trinkets.js';
 import { planMaxOwnedSkills, planEquipmentRank } from '#lib/skill-upgrades.js';
+import { isPrismatic, prismaticOwner } from '#lib/prismatic-quirks.js';
 import { getAvailableCombatSkills } from '#lib/stores/game-data.svelte.js';
 import { parseInteger, validateHeroName } from '#lib/input-validation.js';
 import { updateWallet, updateEstateItem } from '#lib/estate.js';
@@ -458,7 +459,8 @@ export function setHeroStatus(guid: string, status: number) {
 export function addHeroQuirk(guid: string, quirkId: string, quirk: HeroQuirk) {
 	const raw = getHeroRawData(guid);
 	if (!raw || !canPickQuirk(quirkId)) return;
-	raw.quirks[quirkId] = quirk;
+	if (prismaticOwner(getHeroes(), guid, quirkId)) return;
+	raw.quirks[quirkId] = isPrismatic(quirkId) ? { ...quirk, is_locked: false } : quirk;
 	markDirty('persist.roster.json');
 }
 
@@ -472,6 +474,7 @@ export function removeHeroQuirk(guid: string, quirkId: string) {
 
 /** Toggle a quirk's lock state. */
 export function toggleQuirkLock(guid: string, quirkId: string) {
+	if (isPrismatic(quirkId)) return;
 	const raw = getHeroRawData(guid);
 	if (!raw || !raw.quirks[quirkId]) return;
 	raw.quirks[quirkId].is_locked = !raw.quirks[quirkId].is_locked;

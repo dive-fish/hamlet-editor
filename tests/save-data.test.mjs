@@ -129,6 +129,21 @@ test('upgrades group actual camping_trainer purchases', () => {
 	assert.equal(buildingDisplayName(groups[0].buildingName), 'Survivalist');
 });
 
+test('prismatic quirks are unique among living heroes, can coexist, and cannot lock', () => {
+ const q = {is_locked:true,is_new:true,mission_count:0,replaces_quirk:0,replaces_quirk_viewed:false,evolution_duration_remaining:0};
+ store.addHeroQuirk('1','alien_eye',q);
+ assert.equal(store.getHeroRawData('1').quirks.alien_eye.is_locked,false);
+ store.addHeroQuirk('48','alien_eye',q);
+ assert.equal(store.getHeroRawData('48').quirks.alien_eye,undefined);
+ store.getHeroRawData('1')['roster.status']=3;
+ store.addHeroQuirk('48','alien_eye',q);
+ store.addHeroQuirk('48','alien_speed',q);
+ assert(store.getHeroRawData('48').quirks.alien_eye);
+ assert(store.getHeroRawData('48').quirks.alien_speed);
+ store.toggleQuirkLock('48','alien_eye');
+ assert.equal(store.getHeroRawData('48').quirks.alien_eye.is_locked,false);
+});
+
 test('current profile survives empty detection and is not duplicated when detected', () => {
 	const current = withCurrentProfile([], '/manual/profile_0', 'profile_0', true);
 	assert.equal(current[0].profile_id, 'profile_0');
